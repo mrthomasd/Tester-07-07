@@ -29,6 +29,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.DecimalFormat;
+import java.util.EmptyStackException;
 
 public class tester extends FragmentActivity implements OnMapReadyCallback {
     private GoogleMap map;
@@ -39,6 +40,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
         MarkerOptions options = new MarkerOptions();
         LocationManager m = (LocationManager) getSystemService(LOCATION_SERVICE);
         loc = m.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+
         if (loc != null) {
             options.position(new LatLng(loc.getLatitude(), loc.getLongitude()));
             options.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
@@ -68,22 +70,26 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
 
     }
 
-    //Google json Anfrage String
-    final String GOOGLE_KEY = "AIzaSyBOy5KtLlnqgdSvDn7QFlZGJv_NA02GrP8 ";
-    /*
-    DecimalFormat decimalFormat = new DecimalFormat("#.###");
+    public String buildURL(){
+        //Google json Anfrage String
+        final String GOOGLE_KEY = "AIzaSyBOy5KtLlnqgdSvDn7QFlZGJv_NA02GrP8 ";
+        /*
+        DecimalFormat decimalFormat = new DecimalFormat("#.###");
 
         final String latitude = decimalFormat.format(Float.valueOf(Location.convert(loc.getLatitude(), Location.FORMAT_DEGREES)));
         final String longitude = decimalFormat.format(Float.valueOf(Location.convert(loc.getLongitude(), Location.FORMAT_DEGREES)));
-    */
-    final String latitude = "50.06226155";
-    final String longitude = "8.21733695";
-
-    public String buildURL(){
+        */
+        //final String latitude = "50.06226155";
+        //final String longitude = "8.21733695";
+        LocationManager manager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        Location location = manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
+        final String latitude = ""+location.getLatitude();
+        final String longitude = ""+location.getLongitude();
+        Log.d("buildURL: ----->", latitude+""+longitude);
         temp = new StringBuilder("https://maps.googleapis.com/maps/api/place/search/json?location=");
         temp.append(latitude+",");
         temp.append(longitude);
-        temp.append("&radius=5000");
+        temp.append("&radius=1000");
         temp.append("&types=grocery_or_supermarket");
         //temp.append("&name=rewe");
         temp.append("&sensor=true");
@@ -91,6 +97,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
         temp.append(GOOGLE_KEY);
 
         String urlResult = temp.toString();
+        Log.d("------------>: ", urlResult);
         return urlResult;
 
     }
@@ -144,8 +151,8 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
                * Wenn die json Abfrage erledigt wurde, wird geschaut ob POI(s) von Typ grocery_or_supermarket gefunden
                * wurden. Daraufin wird bei jArray != null eine Testweise Handlungsempfehlung Bananen kaufen ausgegeben.
                *
-               */
-                if(jArray != null) {
+
+                if(int results = 0, jArray. < results) {
                     Context context = getApplicationContext();
                     CharSequence text = "Bananen kaufen";
                     int duration = Toast.LENGTH_LONG;
@@ -153,6 +160,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
                     Toast toast = Toast.makeText(context, text, duration);
                     toast.show();
                 }
+                */
                 for (int i = 0; i < jArray.length(); i++) {
                     //JSONObject jsonObj = jArray.optJSONObject(i);
 
