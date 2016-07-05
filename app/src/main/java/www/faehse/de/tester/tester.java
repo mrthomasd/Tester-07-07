@@ -11,7 +11,6 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
@@ -29,8 +28,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.DecimalFormat;
-import java.util.EmptyStackException;
+
 
 public class tester extends FragmentActivity implements OnMapReadyCallback {
     private GoogleMap map;
@@ -68,7 +66,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
         onNewLocation();
-        // Sets the map type to be "hybrid"
+        // Ändern der GoogleMaps
         map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
         // Deaktiviren der Google Buttons für GoogleMaps und Google Routing Funktionen
         //map.getUiSettings().setMapToolbarEnabled(false);;
@@ -77,27 +75,26 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
     }
 
     public String buildURL(){
-        //Google json Anfrage String
-        final String GOOGLE_KEY = "AIzaSyBOy5KtLlnqgdSvDn7QFlZGJv_NA02GrP8 ";
-        /*
-        DecimalFormat decimalFormat = new DecimalFormat("#.###");
-
-        final String latitude = decimalFormat.format(Float.valueOf(Location.convert(loc.getLatitude(), Location.FORMAT_DEGREES)));
-        final String longitude = decimalFormat.format(Float.valueOf(Location.convert(loc.getLongitude(), Location.FORMAT_DEGREES)));
+        /* Hier wird über einen StringBuilder die http Adresse zur aktuellen POI Abfrage über eine json-Datei realisert.
+        * Die http-Suchanfrage hat die Form: https://maps.googleapis.com/maps/api/place/nearbysearch/json
+        * ?location=STRING LATITUDE, STRING LONGITUDE&radius=1000&name=rewe&key=YOUR_GOOGLE_KEY
+        * Feste Latitude und Longitude Werte um String Builder zu testen.
+        * final String latitude = "50.06226155";
+        * final String longitude = "8.21733695";
         */
-        //final String latitude = "50.06226155";
-        //final String longitude = "8.21733695";
+        // Todo Noch zu klären wie es möglich ist, ohne wetere Location und LocationManager Instanz hier fortzufahren.
         LocationManager manager = (LocationManager) getSystemService(LOCATION_SERVICE);
         Location location = manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
         final String latitude = ""+location.getLatitude();
         final String longitude = ""+location.getLongitude();
-        //Log.d("buildURL: ----->", latitude+""+longitude);
+        final String GOOGLE_KEY = "AIzaSyBOy5KtLlnqgdSvDn7QFlZGJv_NA02GrP8 ";
+
         temp = new StringBuilder("https://maps.googleapis.com/maps/api/place/search/json?location=");
         temp.append(latitude+",");
         temp.append(longitude);
-        temp.append("&radius=2000");
-        temp.append("&types=grocery_or_supermarket");
-        //temp.append("&name=rewe");
+        temp.append("&radius=500");
+        //temp.append("&types=grocery_or_supermarket");
+        temp.append("&name=rewe");
         temp.append("&sensor=true");
         temp.append("&key=");
         temp.append(GOOGLE_KEY);
@@ -117,8 +114,8 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
         @Override
         protected String doInBackground(Void... args) {
 
-            //HttpURLConnection conn = null;
             final StringBuilder json = new StringBuilder();
+
             try {
                 // Connect to the web service
                 buildURL();
@@ -145,52 +142,64 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
             return json.toString();
         }
 
-        // Executed after the complete execution of doInBackground() method
+        // Wird nach der kompletten Ausführung der Methode protected String doInBackground(Void... args) ausgeführt
         @Override
         protected void onPostExecute(String json) {
 
             try {
-                // De-serialize the JSON string into an array geometry objects
+                // De - Serialisierung des JSON-String in ein Array mit Geometrie-Objekten.
                 JSONObject mainObj= new JSONObject(json);
+                // Das Array in dem die GEometrie-Objekte enthalten sind, heisst results.
                 JSONArray jArray = mainObj.optJSONArray("results");
-               /*
-               * Wenn die json Abfrage erledigt wurde, wird geschaut ob POI(s) von Typ grocery_or_supermarket gefunden
-               * wurden. Daraufin wird bei jArray != null eine Testweise Handlungsempfehlung Bananen kaufen ausgegeben.
-               *
-
-                if(int results = 0, jArray. < results) {
-                    Context context = getApplicationContext();
-                    CharSequence text = "Bananen kaufen";
-                    int duration = Toast.LENGTH_LONG;
-
-                    Toast toast = Toast.makeText(context, text, duration);
-                    toast.show();
-                }
+                /*
+                 *
+                 * Wenn die json Abfrage erledigt wurde, wird geschaut ob POI(s) von Typ grocery_or_supermarket gefunden
+                 * wurden. Daraufin wird bei jArray != null eine Testweise Handlungsempfehlung Bananen kaufen ausgegeben.
+                 *
                 */
                 for (int i = 0; i < jArray.length(); i++) {
-                    //JSONObject jsonObj = jArray.optJSONObject(i);
-
                     JSONObject temp = jArray.optJSONObject(i);
                     JSONObject loc = temp.optJSONObject("geometry").optJSONObject("location");
+
+                    String stillOpen = jArray.getJSONObject(i).getJSONObject("opening_hours").getString("open_now");
                     double lat = Double.parseDouble(loc.getString("lat"));
                     double lng = Double.parseDouble(loc.getString("lng"));
                     LatLng latLng = new LatLng(lat,lng);
+                    String resultFilter = jArray.getJSONObject(i).optString("name");
 
-                    //move CameraPosition on first result
+                    /*
+                     * Wenn die json Abfrage erledigt wurde, wird geschaut ob POI(s) mit dem Namen Rewe oder Aldi Süd vorhanden sind
+                     * Daraufin wird durch den Aufruf von toast.show eine Handlungsempfehlung ausgegeben.
+                     *
+                    */
+                    if (resultFilter.equalsIgnoreCase("rewe") | resultFilter.equalsIgnoreCase("aldi süd") && stillOpen.equals(false)){
+                        // Todo: Bei einem Treffer die Farbe der dazugehörigen POI-Marker ändern.
+                        Context context = getApplicationContext();
+                        String geschaeft = jArray.getJSONObject(i).optString("name");
+                        String adresse = jArray.getJSONObject(i).optString("vicinity");
+                        CharSequence text = "Eine eingetragene To-do kann hier "+":"+ geschaeft +", " + adresse+ " "+"erledigt werden." ;
+                        int duration = Toast.LENGTH_LONG;
+
+                        Toast toast = Toast.makeText(context, text, duration);
+                        // Ausgabe der Handlungsempfehlung
+                        toast.show();
+                    }
+                    //Kamera Bewegung zum ersten angezeigten POI.
                     if (i == 0) {
                         CameraPosition cameraPosition = new CameraPosition.Builder()
-                                .target(latLng).zoom(13).build();
+                                .target(latLng).zoom(12).build();
 
                         map.animateCamera(CameraUpdateFactory
                                 .newCameraPosition(cameraPosition));
                     }
 
-                    // Create a marker for each city in the JSON data.
+                    // Für jeden POI wird auf der Karte ein Marker erzeugt.
                     JSONObject attr = temp.optJSONObject("geometry");
                     map.addMarker(new MarkerOptions()
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
                             .title(jArray.getJSONObject(i).optString("name"))
-                            .snippet(jArray.getJSONObject(i).optString("vicinity"))
+                            // Todo Eventuell noch anzeigen, ob Geschaeft noch offen aus String stillOpen
+                            .snippet(jArray.getJSONObject(i).optString("vicinity"))// +"Geschäft geöffnet?: "+stillOpen))
                             .position(latLng));
                 }
             } catch (JSONException e) {
