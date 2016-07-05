@@ -11,6 +11,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
@@ -34,13 +35,16 @@ import java.util.EmptyStackException;
 public class tester extends FragmentActivity implements OnMapReadyCallback {
     private GoogleMap map;
     Location loc;
+    LocationManager m;
     StringBuilder temp;
 
-    public void onNewLocation() {
-        MarkerOptions options = new MarkerOptions();
-        LocationManager m = (LocationManager) getSystemService(LOCATION_SERVICE);
+    public void onLocationRequest(){
+        m = (LocationManager) getSystemService(LOCATION_SERVICE);
         loc = m.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
-
+    }
+    public void onNewLocation() {
+        onLocationRequest();
+        MarkerOptions options = new MarkerOptions();
         if (loc != null) {
             options.position(new LatLng(loc.getLatitude(), loc.getLongitude()));
             options.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
@@ -66,6 +70,8 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
         onNewLocation();
         // Sets the map type to be "hybrid"
         map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+        // Deaktiviren der Google Buttons für GoogleMaps und Google Routing Funktionen
+        //map.getUiSettings().setMapToolbarEnabled(false);;
 
 
     }
@@ -85,11 +91,11 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
         Location location = manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
         final String latitude = ""+location.getLatitude();
         final String longitude = ""+location.getLongitude();
-        Log.d("buildURL: ----->", latitude+""+longitude);
+        //Log.d("buildURL: ----->", latitude+""+longitude);
         temp = new StringBuilder("https://maps.googleapis.com/maps/api/place/search/json?location=");
         temp.append(latitude+",");
         temp.append(longitude);
-        temp.append("&radius=1000");
+        temp.append("&radius=2000");
         temp.append("&types=grocery_or_supermarket");
         //temp.append("&name=rewe");
         temp.append("&sensor=true");
@@ -97,7 +103,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
         temp.append(GOOGLE_KEY);
 
         String urlResult = temp.toString();
-        Log.d("------------>: ", urlResult);
+        //Log.d("------------>: ", urlResult);
         return urlResult;
 
     }
