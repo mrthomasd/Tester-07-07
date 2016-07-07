@@ -1,8 +1,17 @@
+/*
+ *
+ * Main Activity  Thomas Fähse 05.07.2016
+ *
+ */
+
 package www.faehse.de.tester;
 
 import android.content.Context;
+import android.location.Criteria;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationProvider;
 import android.os.AsyncTask;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -20,6 +29,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+
 import android.util.Log;
 import android.widget.Toast;
 
@@ -28,48 +38,119 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 
 
 public class tester extends FragmentActivity implements OnMapReadyCallback {
-    private GoogleMap map;
-    Location loc;
-    LocationManager m;
-    StringBuilder temp;
 
-    public void onLocationRequest(){
-        m = (LocationManager) getSystemService(LOCATION_SERVICE);
-        loc = m.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
-    }
-    public void onNewLocation() {
-        onLocationRequest();
-        MarkerOptions options = new MarkerOptions();
-        if (loc != null) {
-            options.position(new LatLng(loc.getLatitude(), loc.getLongitude()));
-            options.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-            options.title("Aktueller Standort");
-            map.addMarker(options);
-        }
-    }
+    private static final String TAG = tester.class.getSimpleName();
+    private GoogleMap map, updateMap;
+    StringBuilder temp;
+    private LocationManager manager;
+    private LocationListener listener;
+    private String provider;
+    String latitude, longitude;
+    MarkerOptions options;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tester);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        new MarkerTask().execute();
+        // LocationManager-Instanz ermitteln
+        manager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        // Liste mit Namen aller Provider erfragen
+        List<String> providers = manager.getAllProviders();
+        for (String name : providers) {
+            LocationProvider lp = manager.getProvider(name);
+            Log.d(TAG,
+                    lp.getName() + " --- isProviderEnabled(): "
+                            + manager.isProviderEnabled(name));
+            Log.d(TAG, "requiresCell(): " + lp.requiresCell());
+            Log.d(TAG, "requiresNetwork(): " + lp.requiresNetwork());
+            Log.d(TAG, "requiresSatellite(): " + lp.requiresSatellite());
+        }
+        // Provider mit grober Auflösung
+        // und niedrigen Energieverbrauch
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_COARSE);
+        criteria.setPowerRequirement(Criteria.POWER_LOW);
+        provider = manager.getBestProvider(criteria, true);
+        Log.d(TAG, provider);
+
+        // LocationListener-Objekt erzeugen
+        listener = new LocationListener() {
+            @Override
+            public void onStatusChanged(String provider, int status,
+                                        Bundle extras) {
+                Log.d(TAG, "onStatusChanged()");
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+                Log.d(TAG, "onProviderEnabled()");
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                Log.d(TAG, "onProviderDisabled()");
+            }
+
+            @Override
+            public void onLocationChanged(Location location) {
+                Log.d(TAG, "onLocationChanged()");
+                if (location != null) {
+                    String newLatitude =String.valueOf(location.getLatitude());
+                    String newLongitude=String.valueOf(location.getLongitude());
+                    Log.d("------------>", newLatitude);
+                    Log.d("------------>", newLongitude);
+
+                    latitude = "50.0968648";
+                    longitude = "8.2169044";
+                    LatLng latlng = new LatLng(location.getLatitude(), location.getLongitude());
+                    options.position(latlng);
+                    options.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+                    CameraPosition cameraPosition = new CameraPosition.Builder().target(latlng).zoom(16).build();
+
+                    map.animateCamera(CameraUpdateFactory
+                            .newCameraPosition(cameraPosition));
+                    options.title("Aktueller Standort");
+                    map.addMarker(options);
+                    new MarkerTask().execute();
+                }
+            }
+        };
+
+
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "onStart()");
+        manager.requestLocationUpdates(provider, 3000, 0,
+                listener);
+        options = new MarkerOptions();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause()");
+        manager.removeUpdates(listener);
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
-        onNewLocation();
         // Ändern der GoogleMaps
         map.setMapType(GoogleMap.MAP_TYPE_HYBRID);
         // Deaktiviren der Google Buttons für GoogleMaps und Google Routing Funktionen
-        //map.getUiSettings().setMapToolbarEnabled(false);;
+        map.getUiSettings().setMapToolbarEnabled(false);;
 
 
     }
@@ -82,15 +163,11 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
         * final String latitude = "50.06226155";
         * final String longitude = "8.21733695";
         */
-        // Todo Noch zu klären wie es möglich ist, ohne wetere Location und LocationManager Instanz hier fortzufahren.
-        LocationManager manager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        Location location = manager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
-        final String latitude = ""+location.getLatitude();
-        final String longitude = ""+location.getLongitude();
         final String GOOGLE_KEY = "AIzaSyBOy5KtLlnqgdSvDn7QFlZGJv_NA02GrP8 ";
 
         temp = new StringBuilder("https://maps.googleapis.com/maps/api/place/search/json?location=");
-        temp.append(latitude+",");
+        temp.append(latitude);
+        temp.append(",");
         temp.append(longitude);
         temp.append("&radius=500");
         //temp.append("&types=grocery_or_supermarket");
@@ -117,8 +194,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
             final StringBuilder json = new StringBuilder();
 
             try {
-                // Connect to the web service
-                buildURL();
+                // Verbindung zum WebService aufbauen
                 URL url = new URL(buildURL());
 
                 connection = (HttpURLConnection) url.openConnection();
@@ -149,7 +225,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
             try {
                 // De - Serialisierung des JSON-String in ein Array mit Geometrie-Objekten.
                 JSONObject mainObj= new JSONObject(json);
-                // Das Array in dem die GEometrie-Objekte enthalten sind, heisst results.
+                // Das Array in dem die Geometrie-Objekte enthalten sind, heisst results.
                 JSONArray jArray = mainObj.optJSONArray("results");
                 /*
                  *
@@ -185,6 +261,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
                         toast.show();
                     }
                     //Kamera Bewegung zum ersten angezeigten POI.
+                    /*
                     if (i == 0) {
                         CameraPosition cameraPosition = new CameraPosition.Builder()
                                 .target(latLng).zoom(12).build();
@@ -192,7 +269,7 @@ public class tester extends FragmentActivity implements OnMapReadyCallback {
                         map.animateCamera(CameraUpdateFactory
                                 .newCameraPosition(cameraPosition));
                     }
-
+                    */
                     // Für jeden POI wird auf der Karte ein Marker erzeugt.
                     JSONObject attr = temp.optJSONObject("geometry");
                     map.addMarker(new MarkerOptions()
